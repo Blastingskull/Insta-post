@@ -59,8 +59,14 @@ function tag(label, x = 65, y = 65) {
 function logo(th = TH, x = 815, y = 58) { drawLogo(ctx, img.logo, x, y, 200, 84, th); }
 function boxie(name, cx, cy, w, rot = 0) {
   const im = img[name], h = w * im.height / im.width;
-  ctx.save(); ctx.translate(cx, cy); ctx.rotate(rot * Math.PI / 180); ctx.drawImage(im, -w / 2, -h / 2, w, h);
-  if (TH.hat && name !== 'sparkles') { ctx.translate(w * 0.05, -h / 2 + 4 + (name === 'hello' ? h * 0.17 : 0)); drawWitchHat(ctx, Math.min(w / 160, 1.2)); }
+  // the square's box inside each image (the hello pose has spark marks above it)
+  const [fx, fy, fw, fh] = name === 'hello' ? [0.1, 0.18, 0.8, 0.82] : [0, 0, 1, 1];
+  const sx = -w / 2 + fx * w, sy = -h / 2 + fy * h, sw = fw * w, sh = fh * h;
+  ctx.save(); ctx.translate(cx, cy); ctx.rotate(rot * Math.PI / 180);
+  const costume = TH.hat && name !== 'sparkles';
+  if (costume) drawWitchCape(ctx, sx, sy, sw, sh);
+  ctx.drawImage(im, -w / 2, -h / 2, w, h);
+  if (costume) { ctx.translate(sx + sw / 2 + sw * 0.02, sy + 5); drawWitchHat(ctx, Math.min(sw / 190, 1.5)); }
   ctx.restore();
 }
 function card(x, y, w, h, stroke = C.navy, lw = 3) { ctx.fillStyle = C.white; rr(x, y, w, h, 14); ctx.fill(); ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.stroke(); }
@@ -72,10 +78,12 @@ function bg(H) { drawThemeBackground(ctx, 1080, H, TH); }
 // ---------- carousel ----------
 function slide1() {
   bg(1350); tag(P.tag); logo();
-  boxie('curious', 935, 300, 230, -14);
-  text('?', 790, 230, { size: 110, color: TH.pal.ink });
-  const hh = para(P.question, 65, 160, 700, 72, 1.05, { maxLines: 3, min: 44 });
-  para(P.rule, 65, 170 + hh + 10, 700, 30, 1.25, { color: TH.pal.sub, bold: false, maxLines: 2, min: 22 });
+  // "?" floats up-left of Boxie's head, clear of the title, the logo and Boxie
+  ctx.save(); ctx.translate(752, 232); ctx.rotate(-12 * Math.PI / 180);
+  text('?', 0, 0, { size: 96, color: TH.pal.dark ? C.pumpkin : TH.pal.ink, align: 'center' }); ctx.restore();
+  boxie('curious', 905, 352, 190, -10);
+  const hh = para(P.question, 65, 160, 640, 72, 1.05, { maxLines: 3, min: 44 });
+  para(P.rule, 65, 170 + hh + 10, 640, 30, 1.25, { color: TH.pal.sub, bold: false, maxLines: 2, min: 22 });
   fit(img.q, 65, 470, 950, 640);
   // buttons
   ctx.fillStyle = TH.pal.dark ? '#0d1430' : C.white; rr(65, 1150, 440, 112, 8); ctx.fill();
@@ -87,23 +95,31 @@ function slide1() {
   if (TH.label) text(TH.label, 1015, 1310, { size: 26, align: 'right', color: TH.pal.dark ? C.pumpkin : TH.pal.sub });
 }
 
-function confetti(seed) {
-  const r = rand(seed), cols = TH.level === 0 || TH.level === 1 || TH.level === 2 || TH.level === 'after'
-    ? [C.yellow, C.magenta, C.teal, C.navy] : [C.pumpkin, '#8e5cd9', C.glow, '#5ad19a'];
-  for (let i = 0; i < 16; i++) {
-    const x = 560 + r() * 470, y = 120 + r() * 370;
-    if (x > 780 && x < 1010 && y > 170 && y < 430) continue;          // keep Boxie clear
-    ctx.save(); ctx.translate(x, y); ctx.rotate(r() * Math.PI); ctx.fillStyle = cols[i % cols.length];
-    if (i % 3) ctx.fillRect(-12, -5, 24, 10); else { ctx.beginPath(); ctx.arc(0, 0, 7, 0, Math.PI * 2); ctx.fill(); }
+// An even burst around Boxie (left, below and right), kept off the logo, Boxie and the big letter.
+function confetti(cx, cy) {
+  const spooky = !(TH.level === 0 || TH.level === 1 || TH.level === 2 || TH.level === 'after');
+  const cols = spooky ? [C.pumpkin, '#8e5cd9', C.glow, '#5ad19a'] : [C.yellow, C.magenta, C.teal, C.navy];
+  const n = 12;
+  for (let i = 0; i < n; i++) {
+    const a = (100 + (i / (n - 1)) * 200) * Math.PI / 180;           // 100°..300°, i.e. left half + below/above-left
+    const r = (i % 2 ? 168 : 196) + (i % 3) * 8;
+    const x = cx + Math.cos(a) * r * 1.05, y = cy + Math.sin(a) * r * 0.9;
+    if (y < 150 || x < 600) continue;
+    ctx.save(); ctx.translate(x, y); ctx.rotate(a + Math.PI / 2); ctx.fillStyle = cols[i % cols.length];
+    if (i % 3 === 2) { ctx.beginPath(); ctx.arc(0, 0, 7, 0, Math.PI * 2); ctx.fill(); } else { rr(-13, -5, 26, 10, 3); ctx.fill(); }
     ctx.restore();
   }
+  // a few on the right edge, below the logo
+  [[1040, 240, 0.6], [1050, 420, -0.4], [1010, 500, 1.1]].forEach(([x, y, ro], k) => {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(ro); ctx.fillStyle = cols[(k + 1) % cols.length]; rr(-12, -5, 24, 10, 3); ctx.fill(); ctx.restore();
+  });
 }
 
 function slide2() {
   bg(1350); tag('THE ANSWER'); logo();
-  confetti(11);
-  boxie('happy', 890, 300, 250, 8);
-  ctx.fillStyle = TH.pal.dark ? 'rgba(0,0,0,0.25)' : '#c9d4cf'; ctx.beginPath(); ctx.ellipse(890, 455, 85, 10, 0, 0, Math.PI * 2); ctx.fill();
+  confetti(880, 372);
+  ctx.fillStyle = TH.pal.dark ? 'rgba(0,0,0,0.25)' : '#c9d4cf'; ctx.beginPath(); ctx.ellipse(880, 505, 90, 10, 0, 0, Math.PI * 2); ctx.fill();
+  boxie('happy', 880, 372, 230, 8);
   const green = TH.pal.dark ? '#36c2a8' : C.teal;
   text(P.answer, 60, 300, { size: 300, color: green });
   font(300); const lw = ctx.measureText(P.answer).width;
@@ -155,7 +171,7 @@ function slide4() {
   ctx.fillStyle = C.cream; rr(315, 750, 450, 84, 8); ctx.fill(); ctx.strokeStyle = C.navy; ctx.lineWidth = 2; ctx.stroke();
   text('Save this for later', 540, 793, { size: 38, align: 'center', color: C.navy });
   text('🔒 Want the beta? Comment or DM "BETA"', 540, 895, { size: 32, align: 'center', color: TH.pal.sub });
-  boxie('hello', 540, 1180, 400);
+  boxie('hello', 540, 1200, 400);
 }
 
 // ---------- story ----------

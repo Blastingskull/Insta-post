@@ -205,10 +205,11 @@ function drawBoxie(t) {
   const im = img[face], w = size, h = size * im.height / im.width;
   ctx.save();
   ctx.translate(cx, baseY + dy); ctx.rotate(rot); ctx.scale(sx, sy);
+  if (TH.hat) drawWitchCape(ctx, -w / 2, -h, w, h);
   ctx.drawImage(im, -w / 2, -h, w, h);
   ctx.restore();
 
-  if (TH.hat) { ctx.save(); ctx.translate(cx, baseY + dy); ctx.rotate(rot); ctx.scale(sx, sy); ctx.translate(6, -h + 3); drawWitchHat(ctx, 0.5); ctx.restore(); }
+  if (TH.hat) { ctx.save(); ctx.translate(cx, baseY + dy); ctx.rotate(rot); ctx.scale(sx, sy); ctx.translate(2, -h + 4); drawWitchHat(ctx, w / 150); ctx.restore(); }
   if (face === 'think') drawThoughts(t, cx, baseY);
   if (face === 'squeeze') drawSweat(t, cx, baseY - h);
 }

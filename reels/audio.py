@@ -19,17 +19,26 @@ BPM = 96
 BEAT = 60 / BPM
 
 
+def release(sig, ms=12):
+    # short fade at the very end so no sound stops mid-wave (that cut is an audible click)
+    n = min(len(sig), int(SR * ms / 1000))
+    if n > 1:
+        sig = sig.copy(); sig[-n:] *= np.linspace(1, 0, n)
+    return sig
+
+
 def tone(freq, dur, harmonics=((1, 1.0),), decay=3.0, attack=0.005):
     t = np.arange(int(dur * SR)) / SR
-    sig = sum(a * np.sin(2 * np.pi * freq * h * t) for h, a in harmonics)
+    # skip partials above ~16 kHz: they only add harsh fizz on phone speakers
+    sig = sum(a * np.sin(2 * np.pi * freq * h * t) for h, a in harmonics if freq * h < 16000)
     env = np.minimum(1, t / attack) * np.exp(-decay * t)
-    return sig * env
+    return release(sig * env)
 
 
 def glide(f0, f1, dur, vib=0.0, vib_rate=6.0):
     t = np.arange(int(dur * SR)) / SR
     f = f0 + (f1 - f0) * (t / dur) + vib * np.sin(2 * np.pi * vib_rate * t)
-    return np.sin(2 * np.pi * np.cumsum(f) / SR)
+    return release(np.sin(2 * np.pi * np.cumsum(f) / SR))
 
 
 def noise(dur, seed=0):
@@ -101,9 +110,10 @@ def music(mx, level, total, solve):
                 mx.add(glide(110, 45, 0.18) * np.exp(-np.arange(int(0.18 * SR)) / SR * 18), bt, gain * 1.6)
             hats = 4 if solve - bt <= 5 else 2
             for h in range(hats):
-                hn = noise(0.03, seed=int(bt * 100) + h)
-                hn = (hn - lowpass(hn, 0.3)) * np.exp(-np.arange(len(hn)) / SR * 120)
-                mx.add(hn, bt + h * BEAT / hats, gain * 0.5)
+                # soft, rounded hat: band-limited noise with a quick fade-in/out (no raw white-noise hiss)
+                hn = noise(0.04, seed=int(bt * 100) + h)
+                hn = lowpass(hn - lowpass(hn, 0.25), 0.5) * np.hanning(len(hn))
+                mx.add(hn, bt + h * BEAT / hats, gain * 0.28)
         t += bar
     # theremin swoops at night / melody on the climax
     if mood in ('night', 'climax'):
@@ -111,16 +121,13 @@ def music(mx, level, total, solve):
         for at, a, b, d in phrase:
             env = np.sin(np.linspace(0, np.pi, int(d * SR)))
             mx.add(glide(midi(a), midi(b), d, vib=6, vib_rate=5.5) * env, at, 0.05 if mood == 'night' else 0.075)
-    # light vinyl crackle
-    cr = noise(total, seed=9) * (np.random.default_rng(3).uniform(0, 1, int(total * SR)) > 0.9993)
-    mx.add(cr, 0, 0.15)
     return mood
 
 
 def sfx(mx, level, n_opts, solve, total, mood):
     # intro whoosh
-    w = noise(0.5, 1); w = lowpass(w, 0.08) * np.sin(np.linspace(0, np.pi, len(w)))
-    mx.add(w, 0, 0.5)
+    w = noise(0.5, 1); w = lowpass(lowpass(w, 0.05), 0.05) * np.sin(np.linspace(0, np.pi, len(w)))
+    mx.add(w, 0, 0.6)
     # "scan" blips (options lift in turn at 0.3 s and 8.5 s, 0.22 s apart)
     scale = [72, 74, 76, 79, 81]
     for start in (0.3, 8.5):
@@ -181,6 +188,7 @@ def main():
     buf = reverb(mx.buf)[: int(a.total * SR)]
     fade = int(0.25 * SR); buf[-fade:] *= np.linspace(1, 0, fade)[:, None]     # clean loop point
     buf /= max(1e-9, np.abs(buf).max()) / 0.9
+    buf[:int(0.01 * SR)] *= np.linspace(0, 1, int(0.01 * SR))[:, None]          # no click on the first sample
     with wave.open(a.out, 'wb') as w:
         w.setnchannels(2); w.setsampwidth(2); w.setframerate(SR)
         w.writeframes((buf * 32767).astype('<i2').tobytes())

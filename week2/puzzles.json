@@ -1,0 +1,108 @@
+{
+  "week": "PATmatrix Daily Puzzles #008-#014",
+  "dates": "Mon 26 Oct - Sun 1 Nov 2026",
+  "note": "All puzzles were picked from the full bank (not retired) and their answers were checked visually against the figures. Do not change answers. Option images are option_<LETTER>.png; angle ranking and cube counting have text options.",
+  "puzzles": [
+    {
+      "number": "008", "day": "Mon 26 Oct", "section": "Keyholes", "folder": "week2/figures/008-keyhole",
+      "question_id": "9a374b5ec8ae5fd2", "level": 6,
+      "question": "Which opening could the object pass through?",
+      "rule_line": "The object can't rotate once it starts through. Only one opening fits.",
+      "options": ["A", "B", "C", "D", "E"],
+      "answer": "D",
+      "why_it_fits": "D is the object's exact outline seen straight on: the bottom gap and the V-notch match in size and position.",
+      "traps": {
+        "A": "The outline of a different side, changed so it can't pass.",
+        "B": "Looks almost like D, but it adds a feature the object doesn't show from that side. Compare carefully, not just the overall shape.",
+        "C": "A different side's outline, changed so it can't pass.",
+        "E": "A different side's outline, changed so it can't pass."
+      }
+    },
+    {
+      "number": "009", "day": "Tue 27 Oct", "section": "Top-Front-End", "folder": "week2/figures/009-tfe",
+      "question_id": "f4852d24cab2f7ce", "level": 6,
+      "question": "Which drawing is the missing FRONT view?",
+      "rule_line": "Solid lines = visible edges. Dashed lines = hidden edges.",
+      "options": ["A", "B", "C", "D"],
+      "answer": "D",
+      "why_it_fits": "The two cut corners in the top view face you, so both show up as solid lines near each end of the front view.",
+      "traps": {
+        "A": "Right kind of line, but only one end shows it. A corner is missing.",
+        "B": "One edge is drawn dashed, but it faces you, so it must be solid.",
+        "C": "A visible edge is drawn dashed. Solid and hidden lines are swapped."
+      }
+    },
+    {
+      "number": "010", "day": "Wed 28 Oct", "section": "Angle Ranking", "folder": "week2/figures/010-angle-ranking",
+      "question_id": "84a4ad2ea0b8bdd2", "level": 6,
+      "question": "Rank the four angles from SMALLEST to LARGEST.",
+      "rule_line": "Ignore line length. Only the opening between the lines counts.",
+      "options": {"A": "4 - 3 - 1 - 2", "B": "3 - 4 - 1 - 2", "C": "4 - 3 - 2 - 1", "D": "2 - 1 - 3 - 4"},
+      "answer": "A",
+      "why_it_fits": "4 is narrowest (about 38 deg), then 3 (about 42 deg), then 1 (about 47 deg), and 2 is widest (about 52 deg).",
+      "traps": {
+        "B": "Swaps 3 and 4, the two closest angles. Long arms on 4 make it look bigger.",
+        "C": "Swaps 1 and 2, the two widest angles.",
+        "D": "The right idea, but ranked largest to smallest. Read the question twice."
+      }
+    },
+    {
+      "number": "011", "day": "Thu 29 Oct", "section": "Hole Punching", "folder": "week2/figures/011-hole-punching",
+      "question_id": "0b83740b807ef81c", "level": 7,
+      "question": "The paper is folded, then punched through all layers. Which is the unfolded pattern?",
+      "rule_line": "Unfold in reverse order. Every hole mirrors across each fold it went through.",
+      "options": ["A", "B", "C", "D", "E"],
+      "answer": "B",
+      "why_it_fits": "The hole is punched in column 3. Undo fold 2 and it mirrors into column 2. Undo fold 1 and that mirrors into column 1. That's 3 holes across the top row.",
+      "traps": {
+        "A": "Only 1 hole. Both folds were ignored.",
+        "C": "4 holes. Column 4 was never folded, so it gets no hole.",
+        "D": "A hole is shifted down one row.",
+        "E": "A hole is shifted by one cell."
+      }
+    },
+    {
+      "number": "012", "day": "Fri 30 Oct", "section": "Cube Counting", "folder": "week2/figures/012-cube-counting",
+      "question_id": "8c09600cb6d32544-1", "level": 5,
+      "question": "How many cubes have exactly 5 painted faces?",
+      "rule_line": "The whole figure is painted on every exposed side except the bottom.",
+      "options": {"A": "1", "B": "2", "C": "3", "D": "4", "E": "5"},
+      "answer": "C",
+      "why_it_fits": "Only the top cube of each tower has 5 painted faces: its top plus all 4 sides. Its bottom rests on the cube below. There are 3 towers, so 3 cubes.",
+      "traps": {
+        "A": "Counts 2 too few. Check every tower, including the short one on the left.",
+        "B": "Counts 1 too few.",
+        "D": "Counts 1 too many. A cube with a neighbour beside it loses a painted side.",
+        "E": "Counts 2 too many."
+      }
+    },
+    {
+      "number": "013", "day": "Sat 31 Oct", "section": "Pattern Folding", "folder": "week2/figures/013-pattern-folding",
+      "question_id": "eeb78f097cd603c9", "level": 6,
+      "question": "Which cube does the pattern fold into?",
+      "rule_line": "Track where the dark face and the dark band end up, and which way the band runs.",
+      "options": ["A", "B", "C", "D"],
+      "answer": "A",
+      "why_it_fits": "A puts the solid dark face and the half-dark band on the right faces, with the band running the right way.",
+      "traps": {
+        "B": "The band is on the right face but turned the wrong way.",
+        "C": "The band is on the right face but turned the wrong way.",
+        "D": "The shading is on the wrong face."
+      }
+    },
+    {
+      "number": "014", "day": "Sun 1 Nov", "section": "Sunday Challenge (Pattern Folding, level 9)", "folder": "week2/figures/014-sunday-challenge",
+      "question_id": "9fbe0eebe2905d5e", "level": 9,
+      "question": "SUNDAY CHALLENGE: Which solid does the pattern fold into?",
+      "rule_line": "All four look alike. Compare proportions, not just shape.",
+      "options": ["A", "B", "C", "D"],
+      "answer": "C",
+      "why_it_fits": "C is the only option whose proportions match the pattern's faces.",
+      "traps": {
+        "A": "The right kind of solid, but its proportions are off.",
+        "B": "The right kind of solid, but its proportions are off.",
+        "D": "This pattern can't fold into it: a face has the wrong shape."
+      }
+    }
+  ]
+}

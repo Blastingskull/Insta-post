@@ -21,14 +21,15 @@ const C = {
 const FONT = '"Liberation Sans", Arial, Helvetica, "Noto Color Emoji", sans-serif';
 const L = {
   pill: { x: 60, y: 250, h: 56 },
-  logo: { x: 760, y: 240, w: 199, h: 77 },
+  logo: { x: 760, y: 236, w: 199, h: 84 },   // logo.svg viewBox is 2646 x 1115
   head: { y: 330, lh: 62, size: 56 },
-  rule: { y: 462, size: 28 },
-  chip: { x: 60, y: 576, w: 72, h: 44 },
-  bar: { x: 146, y: 590, w: 814, h: 16 },
+  rule: { y: 456, size: 28 },
+  chip: { x: 60, y: 586, w: 72, h: 44 },
+  bar: { x: 146, y: 600, w: 814, h: 16 },
   boxie: 80,
-  box: { x: 60, y: 624, w: 900, h: 316 },
-  opt: { size: 224, gap: 16, y: 958, rowGap: 14 },
+  // 5 options: box + 3/2 grid of 224 px. 4 options: one row of 214 px, so the (often tall) stem gets a taller box.
+  box: { x: 60, y: 634, w: 900, h5: 306, h4: 556 },
+  opt: { size: 224, size4: 214, gap: 16, gap4: 14, y: 958, rowGap: 14, y4: 1208 },
   cta: { x: 60, y: 1436, w: 900, h: 94 },
 };
 
@@ -44,7 +45,7 @@ window.load = async (cfg) => {
   R = cfg;
   const faces = ['curious', 'think', 'sweat', 'squeeze', 'blink', 'happy'];
   for (const f of faces) img[f] = await loadImage(`assets/boxie/${f}.png`);
-  img.logo = await loadImage('assets/logo.png');
+  img.logo = await loadImage('assets/logo.svg');
   img.stem = await loadImage(cfg.stem);
   img.opts = [];
   for (const o of cfg.options) img.opts.push(o.image ? await loadImage(o.image) : null);
@@ -109,19 +110,20 @@ function drawHeader(t) {
 }
 
 function drawPuzzle(t) {
-  const b = L.box;
+  const n = R.options.length, o = L.opt, b = L.box, bh = n === 4 ? b.h4 : b.h5;
   ctx.fillStyle = C.white; ctx.strokeStyle = C.navy; ctx.lineWidth = 4;
-  rrect(b.x, b.y, b.w, b.h, 14); ctx.fill(); ctx.stroke();
-  const s = Math.min((b.w - 40) / img.stem.width, (b.h - 24) / img.stem.height);
+  rrect(b.x, b.y, b.w, bh, 14); ctx.fill(); ctx.stroke();
+  const s = Math.min((b.w - 40) / img.stem.width, (bh - 24) / img.stem.height);
   const sw = img.stem.width * s, sh = img.stem.height * s;
-  ctx.drawImage(img.stem, b.x + (b.w - sw) / 2, b.y + (b.h - sh) / 2, sw, sh);
+  ctx.drawImage(img.stem, b.x + (b.w - sw) / 2, b.y + (bh - sh) / 2, sw, sh);
 
-  const n = R.options.length, o = L.opt, S = o.size;
-  const rows = n === 5 ? [3, 2] : n === 4 ? [2, 2] : [n];
+  const S = n === 4 ? o.size4 : o.size, gap = n === 4 ? o.gap4 : o.gap;
+  const rows = n === 5 ? [3, 2] : [n];
   let k = 0;
   rows.forEach((cnt, r) => {
-    const rowW = cnt * S + (cnt - 1) * o.gap, x0 = 60 + (900 - rowW) / 2, y = o.y + r * (S + o.rowGap);
-    for (let i = 0; i < cnt; i++, k++) drawOption(k, x0 + i * (S + o.gap), y, S, t);
+    const rowW = cnt * S + (cnt - 1) * gap, x0 = 60 + (900 - rowW) / 2;
+    const y = (n === 4 ? o.y4 : o.y) + r * (S + o.rowGap);
+    for (let i = 0; i < cnt; i++, k++) drawOption(k, x0 + i * (S + gap), y, S, t);
   });
 }
 
@@ -210,8 +212,21 @@ function drawBoxie(t) {
   ctx.drawImage(im, -w / 2, -h, w, h);
   ctx.restore();
 
+  if (R.witchHat) drawWitchHat(cx, baseY + dy, rot, sx, sy, h);
   if (face === 'think') drawThoughts(t, cx, baseY);
   if (face === 'squeeze') drawSweat(t, cx, baseY - h);
+}
+
+// Halloween touch (#013): a tiny brand-coloured witch hat that moves with Boxie.
+function drawWitchHat(cx, y, rot, sx, sy, h) {
+  ctx.save();
+  ctx.translate(cx, y); ctx.rotate(rot); ctx.scale(sx, sy); ctx.translate(6, -h + 3); ctx.scale(0.5, 0.5);
+  ctx.fillStyle = C.navy;
+  ctx.beginPath(); ctx.ellipse(0, 0, 40, 8, 0, 0, Math.PI * 2); ctx.fill();          // brim
+  ctx.beginPath(); ctx.moveTo(-22, -2); ctx.lineTo(10, -54); ctx.quadraticCurveTo(18, -60, 26, -50);
+  ctx.lineTo(16, -46); ctx.lineTo(22, -2); ctx.closePath(); ctx.fill();               // crooked cone
+  ctx.fillStyle = C.yellow; ctx.fillRect(-20, -12, 41, 7);                             // band
+  ctx.restore();
 }
 
 function drawThoughts(t, cx, baseY) {
@@ -247,7 +262,7 @@ function drawBadge(t) {
   ctx.shadowColor = 'rgba(29,43,79,0.3)'; ctx.shadowBlur = 16; ctx.shadowOffsetY = 6;
   ctx.fillStyle = C.yellow; rrect(-w / 2, -h / 2, w, h, h / 2); ctx.fill();
   ctx.shadowColor = 'transparent';
-  text("⏰ TIME'S UP! Comment your letter", 0, 2, { size: 32, align: 'center', maxW: w - 40, min: 24 });
+  text("⏰ TIME'S UP! Comment your answer", 0, 2, { size: 32, align: 'center', maxW: w - 40, min: 24 });
   ctx.restore();
 }
 

@@ -21,8 +21,14 @@ const PILL = {
   'Hole Punching': 'HOLE PUNCHING', 'Cube Counting': 'CUBE COUNTING', 'Pattern Folding': 'PATTERN FOLDING',
 };
 // Owner-approved wording that differs from puzzles.json.
+// Shorter wording keeps every line big enough to read on a phone; meaning is unchanged.
 const OVERRIDES = {
   '008': { question: 'Which opening fits?', rule: 'Rotate in 3D to align—then pass straight through.' },
+  '010': { question: 'Rank the angles, smallest to largest.' },
+  '011': { question: 'Folded, then punched. Which pattern unfolds?', rule: 'Unfold in reverse order; each hole mirrors across its folds.' },
+  '012': { rule: 'Every exposed side is painted, except the bottom.' },
+  '013': { rule: 'Track where the dark triangle and half-dark face end up.', witchHat: true },
+  '014': { question: 'Which solid does the pattern fold into?' },
 };
 
 function config(num) {
@@ -44,6 +50,7 @@ function config(num) {
     stem: `file://${dir}/stem.png`,
     options: opts,
     solve: SOLVE,
+    witchHat: !!ov.witchHat,
     cta: {
       solve: `👇 Drop your letter (${letters[0]}–${letters.at(-1)}) before the timer hits 0!`,
       solveLine2: [

@@ -23,16 +23,15 @@ This repo holds the puzzle images for PATmatrix's Instagram (@pat.matrix). PATma
 ## Reels: NEVER show the answer
 A Reel's job is to make viewers comment their answer or visit @pat.matrix, where the carousel has the answer. So no answer letter, no answer figure, no "why it fits" and no hint that gives the answer away, in the Reel or its caption. The Reel's pinned comment also must not give the answer; it points to the carousel post instead.
 Silent: no music, no voiceover, no face. Keep text big and inside the safe zone: nothing important in the bottom ~350 px or the right ~120 px. Put the planned seconds in each page's speaker notes. The owner sets page timing and animations in Canva and downloads the MP4.
-1. Hook, ~2 s: section tag + challenge line ("Can you solve this in 10 seconds?"). Boxie curious.
-2. Puzzle, ~10 s: `qNNN.png` (or the stem + options from `figures/` if they read better at 9:16), as large as legibility needs, with a visible "10 s" cue.
-3. Comment, ~3 s: "Comment your answer 👇" with Boxie thinking.
-4. End, ~3 s: "Answer + explanation on @pat.matrix" · "Follow for the daily puzzle" · "Want the beta? DM BETA (18+)".
+The approved Reel template ("PATmatrix Reel — TEMPLATE", `DAHY7KOByoE`) is one continuous canvas: the same layout on both pages, so the puzzle is on screen from 0:00 and never disappears. Export pages 1–2 only.
+1. Solve, 0:00–0:20: yellow pill "DAT <SECTION> CHALLENGE #0NN" (no seconds, so timer length can be tested in Canva), "Most people pick wrong." + the question, the rule line, a navy timer bar, the stem in the object box with a small curious Boxie in its corner, options from `figures/` (5 options = 3 + 2 grid at 230 px; 4 options = 2 × 2), and a navy bottom bar: "👇 Drop your letter (A–E) before the timer hits 0!" · "🔒 Want the beta? Comment or DM "BETA"".
+2. Time's up, 0:20–0:23: same frame, timer empty, Boxie sweating, "⏰ TIME'S UP! Comment your letter" badge; bottom bar "👇 Answer + breakdown in the caption! Follow @pat.matrix for daily PAT." · the beta line.
 
 ## Story format (1080×1920)
 The puzzle in a compact layout, leaving a clear empty area for Instagram's Quiz sticker, which the owner adds in the app. Plus a next-morning frame: "Yesterday's answer is on our page 👉 @pat.matrix" (the story can point to the carousel, but keep the answer itself on the carousel). Same safe-zone rule.
 
 ## Brand rules
-- Calls to action: comment your answer · check out @pat.matrix for the answer · follow for the daily puzzle · DM "BETA" (18+) for beta access. The beta is invite-only, 18+ and small, so never promise instant access.
+- Calls to action: comment your answer · check out @pat.matrix for the answer · follow for the daily puzzle · comment or DM "BETA" for beta access. The beta is invite-only, 18+ and small, so never promise instant access.
 - Boxie (the white cube mascot) never speaks; use the expressions on page 5 of the carousel template. Light theme only. Match #001–#007 exactly in fonts, colours and the dotted background.
 - Never name competitors. No made-up statistics ("90% get this wrong"). No AI voice, no music, no faces.
 - Captions: first line under 125 characters with the hook. Use natural keywords (DAT Perceptual Ability Test, PAT practice, predental, plus the section name), then 3–5 hashtags such as #datprep #predental #patprep #datstudy #dentalschool.

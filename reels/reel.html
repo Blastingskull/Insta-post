@@ -1,0 +1,286 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>PATmatrix Reel renderer</title>
+<style>
+  html, body { margin: 0; background: #222; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<script>
+// One continuous 1080x1920 scene. The puzzle (stem + options) never moves or gets covered;
+// all motion lives in the header, the timer lane, Boxie and the bottom bar.
+const W = 1080, H = 1920;
+const C = {
+  bg: '#eef2f0', dot: '#c9d4cf', navy: '#1d2b4f', yellow: '#f2b705', magenta: '#b4236e',
+  sub: '#4a5878', white: '#ffffff', cream: '#fbefc2',
+};
+const FONT = '"Liberation Sans", Arial, Helvetica, "Noto Color Emoji", sans-serif';
+const L = {
+  pill: { x: 60, y: 250, h: 56 },
+  logo: { x: 760, y: 240, w: 199, h: 77 },
+  head: { y: 330, lh: 62, size: 56 },
+  rule: { y: 462, size: 28 },
+  chip: { x: 60, y: 576, w: 72, h: 44 },
+  bar: { x: 146, y: 590, w: 814, h: 16 },
+  boxie: 80,
+  box: { x: 60, y: 624, w: 900, h: 316 },
+  opt: { size: 224, gap: 16, y: 958, rowGap: 14 },
+  cta: { x: 60, y: 1436, w: 900, h: 94 },
+};
+
+const ctx = document.getElementById('c').getContext('2d');
+let R = null;          // config set by load()
+const img = {};        // loaded images
+
+function loadImage(src) {
+  return new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(src); i.src = src; });
+}
+
+window.load = async (cfg) => {
+  R = cfg;
+  const faces = ['curious', 'think', 'sweat', 'squeeze', 'blink', 'happy'];
+  for (const f of faces) img[f] = await loadImage(`assets/boxie/${f}.png`);
+  img.logo = await loadImage('assets/logo.png');
+  img.stem = await loadImage(cfg.stem);
+  img.opts = [];
+  for (const o of cfg.options) img.opts.push(o.image ? await loadImage(o.image) : null);
+  await document.fonts.load(`bold 40px ${FONT}`);
+  return true;
+};
+
+// ---------- helpers ----------
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const ease = t => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+const easeOutBack = t => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); };
+const elastic = t => t <= 0 ? 0 : t >= 1 ? 1 : Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * (2 * Math.PI / 3)) + 1;
+function hex(c) { return [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16)); }
+function mix(c1, c2, t) { const a = hex(c1), b = hex(c2); return `rgb(${a.map((v, i) => Math.round(lerp(v, b[i], t))).join(',')})`; }
+
+function rrect(x, y, w, h, r) {
+  ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+function font(size, bold = true) { ctx.font = `${bold ? 'bold ' : ''}${size}px ${FONT}`; }
+function fitFont(text, maxW, size, min, bold = true) {
+  let s = size; font(s, bold);
+  while (ctx.measureText(text).width > maxW && s > min) { s -= 1; font(s, bold); }
+  return s;
+}
+function text(t, x, y, { size = 30, color = C.navy, align = 'left', bold = true, base = 'middle', maxW = 0, min = 18 } = {}) {
+  if (maxW) fitFont(t, maxW, size, min, bold); else font(size, bold);
+  ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = base; ctx.fillText(t, x, y);
+}
+
+// ---------- static layers ----------
+function drawBackground() {
+  ctx.fillStyle = C.bg; ctx.fillRect(0, 0, W, H);
+  // Same dotted grid as the carousel template (viewBox 1080 scaled to 1536 wide, offset -228).
+  const s = 1536 / 1080; ctx.fillStyle = C.dot;
+  for (let row = 0; row * 42 * s < H; row++) {
+    const y = (12 + row * 42) * s, x0 = (row % 2 ? 36 : 12);
+    for (let col = 0; x0 + col * 48 < 1080; col++) ctx.fillRect(-228 + (x0 + col * 48) * s, y, 4 * s, 4 * s);
+  }
+}
+
+function drawHeader(t) {
+  // Pill with a soft shine sweeping across every few seconds.
+  font(28); const pw = ctx.measureText(R.pill).width + 40;
+  const p = L.pill;
+  ctx.fillStyle = C.yellow; rrect(p.x, p.y, pw, p.h, 6); ctx.fill();
+  const sh = ((t % 4) / 1.2);
+  if (sh < 1) {
+    ctx.save(); rrect(p.x, p.y, pw, p.h, 6); ctx.clip();
+    const sx = p.x - 120 + sh * (pw + 240);
+    const g = ctx.createLinearGradient(sx - 60, 0, sx + 60, 0);
+    g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(0.5, 'rgba(255,255,255,0.45)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g; ctx.fillRect(p.x, p.y, pw, p.h); ctx.restore();
+  }
+  text(R.pill, p.x + 20, p.y + p.h / 2 + 1, { size: 28 });
+  ctx.drawImage(img.logo, L.logo.x, L.logo.y, L.logo.w, L.logo.h);
+
+  text(R.hook, 60, L.head.y + L.head.lh / 2, { size: L.head.size, maxW: 900, min: 40 });
+  text(R.question, 60, L.head.y + L.head.lh * 1.5, { size: L.head.size, maxW: 900, min: 36 });
+  text(R.rule, 60, L.rule.y + 16, { size: L.rule.size, color: C.sub, bold: false, maxW: 900, min: 22 });
+}
+
+function drawPuzzle(t) {
+  const b = L.box;
+  ctx.fillStyle = C.white; ctx.strokeStyle = C.navy; ctx.lineWidth = 4;
+  rrect(b.x, b.y, b.w, b.h, 14); ctx.fill(); ctx.stroke();
+  const s = Math.min((b.w - 40) / img.stem.width, (b.h - 24) / img.stem.height);
+  const sw = img.stem.width * s, sh = img.stem.height * s;
+  ctx.drawImage(img.stem, b.x + (b.w - sw) / 2, b.y + (b.h - sh) / 2, sw, sh);
+
+  const n = R.options.length, o = L.opt, S = o.size;
+  const rows = n === 5 ? [3, 2] : n === 4 ? [2, 2] : [n];
+  let k = 0;
+  rows.forEach((cnt, r) => {
+    const rowW = cnt * S + (cnt - 1) * o.gap, x0 = 60 + (900 - rowW) / 2, y = o.y + r * (S + o.rowGap);
+    for (let i = 0; i < cnt; i++, k++) drawOption(k, x0 + i * (S + o.gap), y, S, t);
+  });
+}
+
+// Fair "scan" pulse: every option lifts in turn, the same amount, so no option is singled out.
+function scanLift(k, t) {
+  const n = R.options.length;
+  for (const start of [0.3, 8.5]) {
+    const u = (t - start - k * 0.22) / 0.45;
+    if (u > 0 && u < 1) return Math.sin(u * Math.PI);
+  }
+  return 0;
+}
+
+function drawOption(k, x, y, S, t) {
+  const opt = R.options[k], lift = scanLift(k, t);
+  ctx.save();
+  ctx.translate(x + S / 2, y + S / 2); ctx.scale(1 + 0.035 * lift, 1 + 0.035 * lift); ctx.translate(-S / 2, -S / 2);
+  if (lift > 0) { ctx.shadowColor = 'rgba(29,43,79,0.25)'; ctx.shadowBlur = 18 * lift; ctx.shadowOffsetY = 6 * lift; }
+  ctx.fillStyle = C.white; rrect(0, 0, S, S, 12); ctx.fill();
+  ctx.shadowColor = 'transparent';
+  ctx.save(); rrect(0, 0, S, S, 12); ctx.clip();
+  if (img.opts[k]) {
+    const im = img.opts[k], sc = Math.min(S / im.width, S / im.height);
+    ctx.drawImage(im, (S - im.width * sc) / 2, (S - im.height * sc) / 2, im.width * sc, im.height * sc);
+  } else {
+    text(opt.text, S / 2, S / 2 + 14, { size: 44, align: 'center', maxW: S - 30, min: 24 });
+  }
+  ctx.restore();
+  ctx.strokeStyle = C.navy; ctx.lineWidth = 3; rrect(0, 0, S, S, 12); ctx.stroke();
+  ctx.fillStyle = C.navy; rrect(8, 8, 50, 50, 8); ctx.fill();
+  text(opt.letter, 33, 34, { size: 34, color: C.white, align: 'center' });
+  ctx.restore();
+}
+
+// ---------- timer lane ----------
+function drawTimer(t) {
+  const T = R.solve, frac = clamp(1 - t / T, 0, 1), b = L.bar;
+  const left = Math.ceil(clamp(T - t, 0, T));
+  // colour: navy until the last 8 s, then yellow, then magenta for the final 3 s
+  let col = C.navy;
+  if (T - t < 8) col = mix(C.navy, C.yellow, clamp((8 - (T - t)) / 2, 0, 1));
+  if (T - t < 3) col = mix(C.yellow, C.magenta, clamp((3 - (T - t)) / 1, 0, 1));
+  ctx.fillStyle = C.dot; rrect(b.x, b.y, b.w, b.h, b.h / 2); ctx.fill();
+  if (frac > 0) { ctx.fillStyle = col; rrect(b.x, b.y, Math.max(b.h, b.w * frac), b.h, b.h / 2); ctx.fill(); }
+
+  // countdown chip, pulsing on each second in the final 5 s
+  const c = L.chip; let s = 1;
+  if (T - t <= 5 && t < T) { const ph = (t % 1); s = 1 + 0.18 * Math.max(0, 1 - ph * 4); }
+  ctx.save(); ctx.translate(c.x + c.w / 2, c.y + c.h / 2); ctx.scale(s, s);
+  ctx.fillStyle = t < T ? col : C.magenta; rrect(-c.w / 2, -c.h / 2, c.w, c.h, 10); ctx.fill();
+  text(String(left), 0, 2, { size: 28, color: (col === C.navy || t >= T) ? C.white : C.navy, align: 'center' });
+  ctx.restore();
+}
+
+// ---------- Boxie ----------
+function boxieFace(t) {
+  const T = R.solve;
+  if (t >= T) return 'sweat';
+  if (T - t <= 5) return 'squeeze';
+  if (t >= 6) return 'think';
+  // blink for 0.12 s every 2.8 s while curious
+  return ((t + 1.2) % 2.8) < 0.12 ? 'blink' : 'curious';
+}
+
+function drawBoxie(t) {
+  const T = R.solve, size = L.boxie, b = L.bar;
+  const frac = clamp(1 - t / T, 0, 1);
+  // ride the draining edge of the bar, but never sit on the countdown chip
+  let cx = clamp(b.x + b.w * frac, b.x + size / 2 + 4, b.x + b.w - size / 2);
+  let baseY = b.y - 2;                       // Boxie stands on the bar
+  let rot = 0, sx = 1, sy = 1, dy = 0;
+  const face = boxieFace(t);
+  const breath = Math.sin(t * 2 * Math.PI * 1.1);
+  sx = 1 - 0.035 * breath; sy = 1 + 0.045 * breath;
+  if (face === 'think') rot = 7 * Math.sin(t * 2 * Math.PI * 0.45) * Math.PI / 180;
+  if (face === 'squeeze') { cx += Math.sin(t * 42) * 3; rot = Math.sin(t * 31) * 2.5 * Math.PI / 180; }
+  if (t >= T) {                              // time's up: two hops
+    const u = t - T;
+    dy = -Math.abs(Math.sin(u * Math.PI * 2.2)) * 26 * Math.exp(-u * 1.1);
+  } else if (t < 0.6) {                      // little hello hop at the start
+    dy = -Math.sin(t / 0.6 * Math.PI) * 18;
+  }
+  const im = img[face], w = size, h = size * im.height / im.width;
+  ctx.save();
+  ctx.translate(cx, baseY + dy); ctx.rotate(rot); ctx.scale(sx, sy);
+  ctx.drawImage(im, -w / 2, -h, w, h);
+  ctx.restore();
+
+  if (face === 'think') drawThoughts(t, cx, baseY);
+  if (face === 'squeeze') drawSweat(t, cx, baseY - h);
+}
+
+function drawThoughts(t, cx, baseY) {
+  // three bubbles pop in one after another, beside Boxie (never over the puzzle)
+  const cyc = (t - 6) % 1.8, side = cx > 700 ? -1 : 1;
+  const pts = [[52, -28, 6], [70, -46, 9], [94, -66, 13]];   // stays below the rule line
+  pts.forEach(([dx, dy, r], i) => {
+    const a = clamp((cyc - i * 0.3) / 0.2, 0, 1);
+    if (a <= 0) return;
+    ctx.save(); ctx.globalAlpha = a;
+    ctx.beginPath(); ctx.arc(cx + side * dx, baseY + dy, r * easeOutBack(a), 0, Math.PI * 2);
+    ctx.fillStyle = C.white; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = C.navy; ctx.stroke(); ctx.restore();
+  });
+}
+
+function drawSweat(t, cx, topY) {
+  for (let i = 0; i < 3; i++) {
+    const u = ((t * 1.4) + i / 3) % 1, dir = i % 2 ? 1 : -1;
+    const x = cx + dir * (30 + u * 40), y = topY + 8 - Math.sin(u * Math.PI) * 26 + u * 30;
+    ctx.save(); ctx.globalAlpha = 1 - u;
+    ctx.fillStyle = '#5aa9e6';
+    ctx.beginPath(); ctx.moveTo(x, y - 9); ctx.quadraticCurveTo(x + 7, y + 2, x, y + 6); ctx.quadraticCurveTo(x - 7, y + 2, x, y - 9); ctx.fill();
+    ctx.restore();
+  }
+}
+
+// ---------- time's up badge ----------
+function drawBadge(t) {
+  const T = R.solve; if (t < T) return;
+  const u = clamp((t - T) / 0.7, 0, 1), s = elastic(u);
+  const w = 600, h = 72, x = 560, y = L.bar.y + 4;          // clear of Boxie at the left end
+  ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+  ctx.shadowColor = 'rgba(29,43,79,0.3)'; ctx.shadowBlur = 16; ctx.shadowOffsetY = 6;
+  ctx.fillStyle = C.yellow; rrect(-w / 2, -h / 2, w, h, h / 2); ctx.fill();
+  ctx.shadowColor = 'transparent';
+  text("⏰ TIME'S UP! Comment your letter", 0, 2, { size: 32, align: 'center', maxW: w - 40, min: 24 });
+  ctx.restore();
+}
+
+// ---------- bottom CTA bar ----------
+function drawCTA(t) {
+  const c = L.cta, T = R.solve;
+  ctx.fillStyle = C.navy; rrect(c.x, c.y, c.w, c.h, 16); ctx.fill();
+  const solving = t < T;
+  const line1 = solving ? R.cta.solve : R.cta.timesUp;
+  text(line1, W / 2 - 30, c.y + 30, { size: 30, color: C.white, align: 'center', maxW: c.w - 40, min: 22 });
+  // second line rotates, crossfading
+  const seq = solving ? R.cta.solveLine2 : R.cta.timesUpLine2;
+  const t0 = solving ? 0 : T;
+  let idx = 0; for (let i = 0; i < seq.length; i++) if (t - t0 >= seq[i].at) idx = i;
+  const cur = seq[idx], next = seq[idx + 1];
+  let a = 1; const since = t - t0 - cur.at; if (idx > 0 && since < 0.3) a = since / 0.3;
+  if (next && next.at - (t - t0) < 0.3) a = Math.min(a, (next.at - (t - t0)) / 0.3);
+  ctx.save(); ctx.globalAlpha = clamp(a, 0, 1);
+  text(cur.text, W / 2 - 30, c.y + 68, { size: 28, color: C.yellow, align: 'center', maxW: c.w - 40, min: 20 });
+  ctx.restore();
+}
+
+window.drawFrame = (t) => {
+  drawBackground();
+  drawHeader(t);
+  drawPuzzle(t);
+  drawTimer(t);
+  drawBoxie(t);
+  drawBadge(t);
+  drawCTA(t);
+};
+
+window.frameData = () => document.getElementById('c').toDataURL('image/png');
+</script>
+</body>
+</html>

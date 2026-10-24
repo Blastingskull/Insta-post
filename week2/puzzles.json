@@ -106,7 +106,7 @@
       "folder": "week2/figures/012-cube-counting",
       "question_id": "2aab280f5c12c6e2-0",
       "level": 4,
-      "question": "How many cubes have exactly 5 painted faces?",
+      "question": "How many cubes have exactly 4 painted faces?",
       "rule_line": "The whole figure is painted on every exposed side except the bottom.",
       "options": {
         "A": "1",
@@ -115,14 +115,15 @@
         "D": "4",
         "E": "5"
       },
-      "answer": "A",
-      "why_it_fits": "Only the top cube of the right-hand stack stands alone: top + all 4 sides painted. The two back stacks touch, so their tops have only 4.",
+      "answer": "D",
+      "why_it_fits": "Count only cubes with exactly 4 painted faces (the bottom is never painted, and faces touching another cube are not painted). There are 4.",
       "traps": {
-        "B": "Counts 1 too many. The back stacks touch, so their tops have only 4 painted faces.",
-        "C": "Counts 2 too many.",
-        "D": "Counts 3 too many.",
-        "E": "Counts 4 too many."
-      }
+        "A": "1 is the count for exactly 5 painted faces, a different question.",
+        "B": "Counts 2 too few.",
+        "C": "Counts 1 too few.",
+        "E": "Counts 1 too many."
+      },
+      "note": "Question changed from 5 to 4 painted faces by the owner on 24 Oct 2026; answer (4 cubes = D) supplied by the owner. a012.png still shows the old answer and is not used."
     },
     {
       "number": "013",

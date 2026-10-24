@@ -1,0 +1,194 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>PATmatrix carousel + story renderer</title>
+<style>html, body { margin: 0; background: #222; } canvas { display: block; }</style>
+</head>
+<body>
+<canvas id="c" width="1080" height="1350"></canvas>
+<script src="theme.js"></script>
+<script>
+// Carousel (1080x1350, 4 slides) and story (1080x1920, 2 frames), matching the Canva
+// "PATmatrix Daily Puzzle" template and #001-#007: dotted background, yellow tag, Boxie, navy type.
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const C = { ...BRAND };
+let P = null, TH = null, TH2 = null;
+const img = {};
+
+function loadImage(src) { return new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(src); i.src = src; }); }
+
+window.load = async (cfg) => {
+  P = cfg; TH = themeFor(cfg.num); TH2 = themeFor(cfg.nextNum);
+  for (const f of ['curious', 'happy', 'squeeze', 'hello', 'sparkles']) img[f] = await loadImage(`assets/boxie/${f}.png`);
+  img.logo = await loadImage('assets/logo.svg');
+  img.q = await loadImage(cfg.composite);
+  img.answer = cfg.answerImage ? await loadImage(cfg.answerImage) : null;
+  img.opts = {};
+  for (const o of cfg.options) if (o.image) img.opts[o.letter] = await loadImage(o.image);
+  await document.fonts.load(`bold 40px ${FONT}`);
+  return true;
+};
+
+// ---------- text helpers ----------
+function font(size, bold = true) { ctx.font = `${bold ? 'bold ' : ''}${size}px ${FONT}`; }
+function text(t, x, y, { size = 30, color, align = 'left', bold = true, base = 'middle', maxW = 0, min = 18 } = {}) {
+  font(size, bold);
+  if (maxW) while (ctx.measureText(t).width > maxW && size > min) font(--size, bold);
+  ctx.fillStyle = color || TH.pal.ink; ctx.textAlign = align; ctx.textBaseline = base; ctx.fillText(t, x, y);
+}
+function wrap(t, maxW, size, bold = true) {
+  font(size, bold); const words = t.split(' '), lines = []; let line = '';
+  for (const w of words) { const tryL = line ? line + ' ' + w : w; if (ctx.measureText(tryL).width > maxW && line) { lines.push(line); line = w; } else line = tryL; }
+  if (line) lines.push(line); return lines;
+}
+// wrap into at most maxLines, shrinking the font until it fits
+function para(t, x, y, maxW, size, lh, { color, bold = true, maxLines = 3, min = 22, align = 'left' } = {}) {
+  let s = size, lines = wrap(t, maxW, s, bold);
+  while (lines.length > maxLines && s > min) { s -= 2; lines = wrap(t, maxW, s, bold); }
+  const L = s * lh;
+  lines.forEach((l, i) => text(l, x, y + i * L + L / 2, { size: s, color, bold, align }));
+  return lines.length * L;
+}
+function rr(x, y, w, h, r) { rrectPath(ctx, x, y, w, h, r); }
+function tag(label, x = 65, y = 65) {
+  font(28); const w = ctx.measureText(label).width + 40;
+  ctx.fillStyle = TH.pal.pill; rr(x, y, w, 56, 5); ctx.fill();
+  text(label, x + 20, y + 29, { size: 28, color: C.navy });
+}
+function logo(th = TH, x = 815, y = 58) { drawLogo(ctx, img.logo, x, y, 200, 84, th); }
+function boxie(name, cx, cy, w, rot = 0) {
+  const im = img[name], h = w * im.height / im.width;
+  ctx.save(); ctx.translate(cx, cy); ctx.rotate(rot * Math.PI / 180); ctx.drawImage(im, -w / 2, -h / 2, w, h);
+  if (TH.hat && name !== 'sparkles') { ctx.translate(w * 0.05, -h / 2 + 4); drawWitchHat(ctx, w / 160); }
+  ctx.restore();
+}
+function card(x, y, w, h, stroke = C.navy, lw = 3) { ctx.fillStyle = C.white; rr(x, y, w, h, 14); ctx.fill(); ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.stroke(); }
+function arrow(x, y, col) { ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(x, y - 5); ctx.lineTo(x + 26, y - 5); ctx.lineTo(x + 26, y - 15); ctx.lineTo(x + 42, y); ctx.lineTo(x + 26, y + 15); ctx.lineTo(x + 26, y + 5); ctx.lineTo(x, y + 5); ctx.closePath(); ctx.fill(); }
+function swipe(label = 'Swipe') { text(label, 955, 1262, { size: 32, align: 'right' }); arrow(965, 1262, TH.pal.ink); }
+function fit(im, x, y, w, h) { const s = Math.min(w / im.width, h / im.height); ctx.drawImage(im, x + (w - im.width * s) / 2, y + (h - im.height * s) / 2, im.width * s, im.height * s); }
+function bg(H) { drawThemeBackground(ctx, 1080, H, TH); }
+
+// ---------- carousel ----------
+function slide1() {
+  bg(1350); tag(P.tag); logo();
+  boxie('curious', 935, 300, 230, -14);
+  text('?', 790, 230, { size: 110, color: TH.pal.ink });
+  const hh = para(P.question, 65, 160, 700, 72, 1.05, { maxLines: 3, min: 44 });
+  para(P.rule, 65, 170 + hh + 10, 700, 30, 1.25, { color: TH.pal.sub, bold: false, maxLines: 2, min: 22 });
+  fit(img.q, 65, 470, 950, 640);
+  // buttons
+  ctx.fillStyle = TH.pal.dark ? '#0d1430' : C.white; rr(65, 1150, 440, 112, 8); ctx.fill();
+  ctx.strokeStyle = TH.pal.dark ? C.pumpkin : C.navy; ctx.lineWidth = 3; ctx.stroke();
+  text('Comment your answer', 285, 1207, { size: 36, align: 'center', color: TH.pal.ink });
+  ctx.fillStyle = TH.pal.dark ? C.pumpkin : C.navy; rr(535, 1150, 480, 112, 8); ctx.fill();
+  text('Swipe for answer', 575, 1207, { size: 36, color: TH.pal.dark ? C.navy : C.white });
+  arrow(950, 1207, TH.pal.dark ? C.navy : C.white);
+  if (TH.label) text(TH.label, 1015, 1310, { size: 26, align: 'right', color: TH.pal.dark ? C.pumpkin : TH.pal.sub });
+}
+
+function confetti(seed) {
+  const r = rand(seed), cols = TH.level === 0 || TH.level === 1 || TH.level === 2 || TH.level === 'after'
+    ? [C.yellow, C.magenta, C.teal, C.navy] : [C.pumpkin, '#8e5cd9', C.glow, '#5ad19a'];
+  for (let i = 0; i < 16; i++) {
+    const x = 560 + r() * 470, y = 120 + r() * 370;
+    if (x > 780 && x < 1010 && y > 170 && y < 430) continue;          // keep Boxie clear
+    ctx.save(); ctx.translate(x, y); ctx.rotate(r() * Math.PI); ctx.fillStyle = cols[i % cols.length];
+    if (i % 3) ctx.fillRect(-12, -5, 24, 10); else { ctx.beginPath(); ctx.arc(0, 0, 7, 0, Math.PI * 2); ctx.fill(); }
+    ctx.restore();
+  }
+}
+
+function slide2() {
+  bg(1350); tag('THE ANSWER'); logo();
+  confetti(11);
+  boxie('happy', 890, 300, 250, 8);
+  ctx.fillStyle = TH.pal.dark ? 'rgba(0,0,0,0.25)' : '#c9d4cf'; ctx.beginPath(); ctx.ellipse(890, 455, 85, 10, 0, 0, Math.PI * 2); ctx.fill();
+  const green = TH.pal.dark ? '#36c2a8' : C.teal;
+  text(P.answer, 60, 300, { size: 300, color: green });
+  font(300); const lw = ctx.measureText(P.answer).width;
+  ctx.fillStyle = green; ctx.beginPath(); ctx.arc(60 + lw + 70, 345, 56, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = C.white; ctx.lineWidth = 12; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.beginPath(); ctx.moveTo(60 + lw + 44, 347); ctx.lineTo(60 + lw + 63, 366); ctx.lineTo(60 + lw + 98, 324); ctx.stroke();
+  text('Got it right? Nice work!', 65, 505, { size: 46 });
+  card(65, 560, 950, 390, green, 5);
+  if (img.answer) fit(img.answer, 65 + 40, 580, 870, 350);
+  else text(P.answerText, 540, 755, { size: 110, align: 'center', color: C.navy, maxW: 860, min: 50 });
+  ctx.fillStyle = TH.pal.dark ? '#22305a' : C.mint; rr(65, 990, 950, 200, 6); ctx.fill();
+  ctx.fillStyle = green; ctx.fillRect(65, 990, 12, 200);
+  para(P.why, 105, 1010, 880, 34, 1.3, { bold: false, maxLines: 4, min: 24 });
+  swipe('Swipe: why the others fail');
+}
+
+function slide3() {
+  bg(1350); tag('COMMON TRAPS'); logo();
+  text('Why the others fail', 65, 210, { size: 80 });
+  text("Spot these traps and you won't fall for them again.", 65, 290, { size: 32, bold: false, color: TH.pal.sub, maxW: 950 });
+  const wrong = P.options.filter(o => o.letter !== P.answer);
+  const rowH = wrong.length === 4 ? 172 : 200, gap = 16, y0 = 350;
+  wrong.forEach((o, i) => {
+    const y = y0 + i * (rowH + gap);
+    ctx.fillStyle = C.white; rr(65, y, 950, rowH, 10); ctx.fill(); ctx.strokeStyle = '#c9d4cf'; ctx.lineWidth = 2; ctx.stroke();
+    const s = rowH - 24;
+    if (img.opts[o.letter]) { ctx.save(); rr(80, y + 12, s, s, 8); ctx.clip(); ctx.fillStyle = '#f4f6f5'; ctx.fillRect(80, y + 12, s, s); fit(img.opts[o.letter], 80, y + 12, s, s); ctx.restore(); }
+    else { ctx.fillStyle = '#f4f6f5'; rr(80, y + 12, s, s, 8); ctx.fill(); text(o.text, 80 + s / 2, y + rowH / 2, { size: 40, align: 'center', color: C.navy, maxW: s - 16, min: 22 }); }
+    ctx.fillStyle = C.navy; rr(86, y + 18, 44, 44, 6); ctx.fill(); text(o.letter, 108, y + 41, { size: 28, align: 'center', color: C.white });
+    const bx = 80 + s + 22;
+    ctx.fillStyle = C.magenta; rr(bx, y + rowH / 2 - 28, 56, 56, 6); ctx.fill();
+    ctx.strokeStyle = C.white; ctx.lineWidth = 7; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(bx + 17, y + rowH / 2 - 11); ctx.lineTo(bx + 39, y + rowH / 2 + 11); ctx.moveTo(bx + 39, y + rowH / 2 - 11); ctx.lineTo(bx + 17, y + rowH / 2 + 11); ctx.stroke();
+    const tx = bx + 80, words = `${o.letter}: ${P.traps[o.letter]}`;
+    const lines = wrap(words, 1000 - tx, 32, false).slice(0, 4), lh = 40;
+    lines.forEach((l, k) => text(l, tx, y + rowH / 2 - (lines.length - 1) * lh / 2 + k * lh, { size: 32, bold: false, color: C.navy }));
+  });
+  boxie('squeeze', 170, 1250, 170, 14);
+  swipe();
+}
+
+function slide4() {
+  bg(1350); tag('SEE YOU TOMORROW'); logo();
+  drawThemeDecor(ctx, 1080, 1350, { ...TH, moon: 0, cobweb: false, stars: false, bats: Math.min(TH.bats, 3) }, 1.3, { top: [150, 330], bottom: [1040, 1350] });
+  text('A new PAT puzzle', 540, 420, { size: 80, align: 'center' });
+  text('every day', 540, 505, { size: 80, align: 'center' });
+  ctx.fillStyle = TH.pal.dark ? C.pumpkin : C.navy; rr(190, 590, 700, 120, 8); ctx.fill();
+  text('Follow @pat.matrix', 540, 652, { size: 54, align: 'center', color: TH.pal.dark ? C.navy : C.white });
+  ctx.fillStyle = C.cream; rr(315, 750, 450, 84, 8); ctx.fill(); ctx.strokeStyle = C.navy; ctx.lineWidth = 2; ctx.stroke();
+  text('Save this for later', 540, 793, { size: 38, align: 'center', color: C.navy });
+  text('🔒 Want the beta? Comment or DM "BETA"', 540, 895, { size: 32, align: 'center', color: TH.pal.sub });
+  boxie('hello', 540, 1160, 400);
+}
+
+// ---------- story ----------
+function storyBg(th) { drawThemeBackground(ctx, 1080, 1920, th); }
+function story1() {
+  storyBg(TH); drawThemeDecor(ctx, 1080, 1920, TH, 2, { top: [0, 228], bottom: [1545, 1920] });
+  if (TH.label) text(TH.label, 540, 196, { size: 32, align: 'center', color: TH.pal.dark ? C.pumpkin : C.navy });
+  tag(P.tag, 60, 250); drawLogo(ctx, img.logo, 760, 236, 199, 84, TH);
+  const hh = para(P.question, 60, 345, 900, 60, 1.08, { maxLines: 3, min: 40 });
+  para(P.rule, 60, 345 + hh + 8, 900, 30, 1.25, { color: TH.pal.sub, bold: false, maxLines: 2, min: 22 });
+  fit(img.q, 60, 520, 960, 625);
+  boxie('curious', 900, 1215, 120, -10);
+  text('Tap your answer in the quiz 👇', 60, 1215, { size: 36 });
+  // 1270-1530 left empty for Instagram's Quiz sticker
+}
+function story2() {
+  const th = TH2; const save = TH; TH = th;
+  storyBg(th); drawThemeDecor(ctx, 1080, 1920, th, 4, { top: [0, 228], bottom: [1545, 1920] });
+  tag('YESTERDAY\'S PUZZLE', 60, 250); drawLogo(ctx, img.logo, 760, 236, 199, 84, th);
+  text('Did you get it?', 60, 400, { size: 80 });
+  ctx.globalAlpha = 0.95; fit(img.q, 160, 480, 760, 495); ctx.globalAlpha = 1;
+  boxie('happy', 540, 1150, 240, 6);
+  text("Yesterday's answer is on our page 👉", 540, 1360, { size: 46, align: 'center', maxW: 960 });
+  ctx.fillStyle = th.pal.dark ? C.pumpkin : C.navy; rr(240, 1410, 600, 110, 10); ctx.fill();
+  text('@pat.matrix', 540, 1466, { size: 56, align: 'center', color: th.pal.dark ? C.navy : C.white });
+  TH = save;
+}
+
+window.render = (kind, page) => {
+  cv.height = kind === 'story' ? 1920 : 1350;
+  ({ carousel: [slide1, slide2, slide3, slide4], story: [story1, story2] })[kind][page - 1]();
+  return cv.toDataURL('image/png');
+};
+</script>
+</body>
+</html>

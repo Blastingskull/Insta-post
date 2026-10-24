@@ -10,15 +10,13 @@
 </head>
 <body>
 <canvas id="c" width="1080" height="1920"></canvas>
+<script src="theme.js"></script>
 <script>
 // One continuous 1080x1920 scene. The puzzle (stem + options) never moves or gets covered;
 // all motion lives in the header, the timer lane, Boxie and the bottom bar.
 const W = 1080, H = 1920;
-const C = {
-  bg: '#eef2f0', dot: '#c9d4cf', navy: '#1d2b4f', yellow: '#f2b705', magenta: '#b4236e',
-  sub: '#4a5878', white: '#ffffff', cream: '#fbefc2',
-};
-const FONT = '"Liberation Sans", Arial, Helvetica, "Noto Color Emoji", sans-serif';
+const C = { ...BRAND };   // brand colours (theme.js); day palette lives in TH.pal
+let TH = themeFor('');
 const L = {
   pill: { x: 60, y: 250, h: 56 },
   logo: { x: 760, y: 236, w: 199, h: 84 },   // logo.svg viewBox is 2646 x 1115
@@ -42,7 +40,7 @@ function loadImage(src) {
 }
 
 window.load = async (cfg) => {
-  R = cfg;
+  R = cfg; TH = themeFor(cfg.num);
   const faces = ['curious', 'think', 'sweat', 'squeeze', 'blink', 'happy'];
   for (const f of faces) img[f] = await loadImage(`assets/boxie/${f}.png`);
   img.logo = await loadImage('assets/logo.svg');
@@ -78,21 +76,18 @@ function text(t, x, y, { size = 30, color = C.navy, align = 'left', bold = true,
 }
 
 // ---------- static layers ----------
-function drawBackground() {
-  ctx.fillStyle = C.bg; ctx.fillRect(0, 0, W, H);
-  // Same dotted grid as the carousel template (viewBox 1080 scaled to 1536 wide, offset -228).
-  const s = 1536 / 1080; ctx.fillStyle = C.dot;
-  for (let row = 0; row * 42 * s < H; row++) {
-    const y = (12 + row * 42) * s, x0 = (row % 2 ? 36 : 12);
-    for (let col = 0; x0 + col * 48 < 1080; col++) ctx.fillRect(-228 + (x0 + col * 48) * s, y, 4 * s, 4 * s);
-  }
+function drawBackground(t) {
+  drawThemeBackground(ctx, W, H, TH);
+  // decorations stay in the IG-covered top/bottom bands, never over the puzzle
+  drawThemeDecor(ctx, W, H, TH, t, { top: [0, 228], bottom: [1545, 1920] });
+  if (TH.label) text(TH.label, W / 2, 196, { size: 30, color: TH.pal.dark ? C.pumpkin : C.navy, align: 'center' });
 }
 
 function drawHeader(t) {
   // Pill with a soft shine sweeping across every few seconds.
   font(28); const pw = ctx.measureText(R.pill).width + 40;
   const p = L.pill;
-  ctx.fillStyle = C.yellow; rrect(p.x, p.y, pw, p.h, 6); ctx.fill();
+  ctx.fillStyle = TH.pal.pill; rrect(p.x, p.y, pw, p.h, 6); ctx.fill();
   const sh = ((t % 4) / 1.2);
   if (sh < 1) {
     ctx.save(); rrect(p.x, p.y, pw, p.h, 6); ctx.clip();
@@ -102,11 +97,11 @@ function drawHeader(t) {
     ctx.fillStyle = g; ctx.fillRect(p.x, p.y, pw, p.h); ctx.restore();
   }
   text(R.pill, p.x + 20, p.y + p.h / 2 + 1, { size: 28 });
-  ctx.drawImage(img.logo, L.logo.x, L.logo.y, L.logo.w, L.logo.h);
+  drawLogo(ctx, img.logo, L.logo.x, L.logo.y, L.logo.w, L.logo.h, TH);
 
-  text(R.hook, 60, L.head.y + L.head.lh / 2, { size: L.head.size, maxW: 900, min: 40 });
-  text(R.question, 60, L.head.y + L.head.lh * 1.5, { size: L.head.size, maxW: 900, min: 36 });
-  text(R.rule, 60, L.rule.y + 16, { size: L.rule.size, color: C.sub, bold: false, maxW: 900, min: 22 });
+  text(R.hook, 60, L.head.y + L.head.lh / 2, { size: L.head.size, color: TH.pal.ink, maxW: 900, min: 40 });
+  text(R.question, 60, L.head.y + L.head.lh * 1.5, { size: L.head.size, color: TH.pal.ink, maxW: 900, min: 36 });
+  text(R.rule, 60, L.rule.y + 16, { size: L.rule.size, color: TH.pal.sub, bold: false, maxW: 900, min: 22 });
 }
 
 function drawPuzzle(t) {
@@ -163,10 +158,11 @@ function drawTimer(t) {
   const T = R.solve, frac = clamp(1 - t / T, 0, 1), b = L.bar;
   const left = Math.ceil(clamp(T - t, 0, T));
   // colour: navy until the last 8 s, then yellow, then magenta for the final 3 s
-  let col = C.navy;
-  if (T - t < 8) col = mix(C.navy, C.yellow, clamp((8 - (T - t)) / 2, 0, 1));
+  const base = TH.pal.dark ? C.pumpkin : C.navy;
+  let col = base;
+  if (T - t < 8) col = mix(base, C.yellow, clamp((8 - (T - t)) / 2, 0, 1));
   if (T - t < 3) col = mix(C.yellow, C.magenta, clamp((3 - (T - t)) / 1, 0, 1));
-  ctx.fillStyle = C.dot; rrect(b.x, b.y, b.w, b.h, b.h / 2); ctx.fill();
+  ctx.fillStyle = TH.pal.track; rrect(b.x, b.y, b.w, b.h, b.h / 2); ctx.fill();
   if (frac > 0) { ctx.fillStyle = col; rrect(b.x, b.y, Math.max(b.h, b.w * frac), b.h, b.h / 2); ctx.fill(); }
 
   // countdown chip, pulsing on each second in the final 5 s
@@ -212,21 +208,9 @@ function drawBoxie(t) {
   ctx.drawImage(im, -w / 2, -h, w, h);
   ctx.restore();
 
-  if (R.witchHat) drawWitchHat(cx, baseY + dy, rot, sx, sy, h);
+  if (TH.hat) { ctx.save(); ctx.translate(cx, baseY + dy); ctx.rotate(rot); ctx.scale(sx, sy); ctx.translate(6, -h + 3); drawWitchHat(ctx, 0.5); ctx.restore(); }
   if (face === 'think') drawThoughts(t, cx, baseY);
   if (face === 'squeeze') drawSweat(t, cx, baseY - h);
-}
-
-// Halloween touch (#013): a tiny brand-coloured witch hat that moves with Boxie.
-function drawWitchHat(cx, y, rot, sx, sy, h) {
-  ctx.save();
-  ctx.translate(cx, y); ctx.rotate(rot); ctx.scale(sx, sy); ctx.translate(6, -h + 3); ctx.scale(0.5, 0.5);
-  ctx.fillStyle = C.navy;
-  ctx.beginPath(); ctx.ellipse(0, 0, 40, 8, 0, 0, Math.PI * 2); ctx.fill();          // brim
-  ctx.beginPath(); ctx.moveTo(-22, -2); ctx.lineTo(10, -54); ctx.quadraticCurveTo(18, -60, 26, -50);
-  ctx.lineTo(16, -46); ctx.lineTo(22, -2); ctx.closePath(); ctx.fill();               // crooked cone
-  ctx.fillStyle = C.yellow; ctx.fillRect(-20, -12, 41, 7);                             // band
-  ctx.restore();
 }
 
 function drawThoughts(t, cx, baseY) {
@@ -269,10 +253,11 @@ function drawBadge(t) {
 // ---------- bottom CTA bar ----------
 function drawCTA(t) {
   const c = L.cta, T = R.solve;
-  ctx.fillStyle = C.navy; rrect(c.x, c.y, c.w, c.h, 16); ctx.fill();
+  ctx.fillStyle = TH.pal.panel; rrect(c.x, c.y, c.w, c.h, 16); ctx.fill();
+  if (TH.pal.dark) { ctx.strokeStyle = C.pumpkin; ctx.lineWidth = 3; ctx.stroke(); }
   const solving = t < T;
   const line1 = solving ? R.cta.solve : R.cta.timesUp;
-  text(line1, W / 2 - 30, c.y + 30, { size: 30, color: C.white, align: 'center', maxW: c.w - 40, min: 22 });
+  text(line1, W / 2 - 30, c.y + 30, { size: 30, color: TH.pal.panelInk, align: 'center', maxW: c.w - 40, min: 22 });
   // second line rotates, crossfading
   const seq = solving ? R.cta.solveLine2 : R.cta.timesUpLine2;
   const t0 = solving ? 0 : T;
@@ -281,12 +266,12 @@ function drawCTA(t) {
   let a = 1; const since = t - t0 - cur.at; if (idx > 0 && since < 0.3) a = since / 0.3;
   if (next && next.at - (t - t0) < 0.3) a = Math.min(a, (next.at - (t - t0)) / 0.3);
   ctx.save(); ctx.globalAlpha = clamp(a, 0, 1);
-  text(cur.text, W / 2 - 30, c.y + 68, { size: 28, color: C.yellow, align: 'center', maxW: c.w - 40, min: 20 });
+  text(cur.text, W / 2 - 30, c.y + 68, { size: 28, color: TH.pal.panelInk2, align: 'center', maxW: c.w - 40, min: 20 });
   ctx.restore();
 }
 
 window.drawFrame = (t) => {
-  drawBackground();
+  drawBackground(t);
   drawHeader(t);
   drawPuzzle(t);
   drawTimer(t);

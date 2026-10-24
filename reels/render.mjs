@@ -1,9 +1,9 @@
-// Render a PATmatrix Reel to MP4 from week2/puzzles.json + week2/figures.
+// Render a PATmatrix Reel (video + synthesized soundtrack) to MP4 from week2/puzzles.json + week2/figures.
 //   node reels/render.mjs 008                 -> reels/out/reel-008.mp4
 //   node reels/render.mjs 008 --stills 0,7,12,18,21   -> PNG stills only (for review)
 import { createRequire } from 'node:module';
-import { spawn } from 'node:child_process';
-import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
+import { spawn, spawnSync } from 'node:child_process';
+import { readFileSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -27,7 +27,7 @@ const OVERRIDES = {
   '010': { question: 'Rank the angles, smallest to largest.' },
   '011': { question: 'Folded, then punched. Which pattern unfolds?', rule: 'Unfold in reverse order; each hole mirrors across its folds.' },
   '012': { rule: 'Every exposed side is painted, except the bottom.' },
-  '013': { rule: 'Track where the dark triangle and half-dark face end up.', witchHat: true },
+  '013': { rule: 'Track where the dark triangle and half-dark face end up.' },
   '014': { question: 'Which solid does the pattern fold into?' },
 };
 
@@ -50,7 +50,7 @@ function config(num) {
     stem: `file://${dir}/stem.png`,
     options: opts,
     solve: SOLVE,
-    witchHat: !!ov.witchHat,
+    num,
     cta: {
       solve: `👇 Drop your letter (${letters[0]}–${letters.at(-1)}) before the timer hits 0!`,
       solveLine2: [
@@ -89,17 +89,25 @@ async function main() {
   } else {
     const file = join(outDir, `reel-${num}.mp4`);
     const total = Math.round((SOLVE + TIMES_UP) * FPS);
+    // soundtrack: synthesized music bed + SFX matching this day's Halloween level
+    const wav = join(outDir, `reel-${num}.wav`);
+    const level = await page.evaluate(n => String(themeFor(n).level), num);
+    const opts = config(num).options.length;
+    const py = spawnSync('python3', [join(HERE, 'audio.py'), '--level', level, '--options', String(opts),
+      '--solve', String(SOLVE), '--total', String(SOLVE + TIMES_UP), '--out', wav], { stdio: 'inherit' });
+    if (py.status !== 0) throw new Error('audio.py failed');
     const ff = spawn('ffmpeg', ['-y', '-loglevel', 'error',
-      '-f', 'image2pipe', '-framerate', String(FPS), '-i', '-',
-      '-f', 'lavfi', '-i', 'anullsrc=channel_layout=stereo:sample_rate=44100',   // silent track for upload compatibility
+      '-f', 'image2pipe', '-framerate', String(FPS), '-i', '-', '-i', wav,
       '-shortest', '-c:v', 'libx264', '-preset', 'medium', '-crf', '18', '-pix_fmt', 'yuv420p',
-      '-c:a', 'aac', '-b:a', '64k', '-movflags', '+faststart', file], { stdio: ['pipe', 'inherit', 'inherit'] });
+      '-af', 'loudnorm=I=-14:TP=-1.5:LRA=11', '-ar', '44100',
+      '-c:a', 'aac', '-b:a', '160k', '-movflags', '+faststart', file], { stdio: ['pipe', 'inherit', 'inherit'] });
     for (let i = 0; i < total; i++) {
       const buf = await grab(i / FPS);
       if (!ff.stdin.write(buf)) await new Promise(r => ff.stdin.once('drain', r));
     }
     ff.stdin.end();
     await new Promise((res, rej) => ff.on('close', c => c === 0 ? res() : rej(new Error(`ffmpeg exited ${c}`))));
+    rmSync(wav, { force: true });
     console.log(file);
   }
   await browser.close();

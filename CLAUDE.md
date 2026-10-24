@@ -1,42 +1,45 @@
 # PATmatrix Instagram content: instructions for Claude
 
-This repo holds the puzzle images for PATmatrix's Instagram (@pat.matrix). PATmatrix is an invite-only beta web app (app.patmatrix.app) for practicing the DAT Perceptual Ability Test (PAT), aimed at predental students. You make the posts in the owner's **Canva account** through the Canva connector. Puzzles are already picked and their answers checked. Don't change answers and don't redraw any figure.
+This repo holds the puzzle images for PATmatrix's Instagram (@pat.matrix). PATmatrix is an invite-only beta web app (app.patmatrix.app) for practicing the DAT Perceptual Ability Test (PAT), aimed at predental students. Posts (Reels, carousels, stories) are **rendered in code** in `reels/`, following the look of the owner's Canva templates. Puzzles are already picked and their answers checked. Don't change answers and don't redraw any figure; if the owner changes a question, they supply the verified answer.
 
 ## Repo layout
 - `week1/`: puzzles #001–#007 (already posted). `qNNN.png` = puzzle composite (stem box + lettered option boxes, 1904×1240, transparent background). `aNNN.png` = answer figure (680×680).
 - `week2/`: puzzles **#008–#014** in the same format, plus:
-  - `week2/puzzles.json`: day, section, question, rule line, options, **verified answer**, "why it fits" line and a reason each wrong option fails.
-  - `week2/figures/<NNN-section>/`: `stem.png` and `option_X.png` on their own, for layouts where the composite doesn't fit (Reels, stories).
-- Images reach Canva by URL: the repo is public, so use `upload-asset-from-url` with `https://raw.githubusercontent.com/Blastingskull/Insta-post/main/<path>`. If that fails, stop and ask the owner to drag the `week2` folder into Canva Uploads.
+  - `week2/puzzles.json`: day, section, question, rule line, options, **verified answer**, "why it fits" line and a reason each wrong option fails. #012 was changed by the owner to "exactly 4 painted faces" (answer D); `a012.png` still shows the old answer and is not used.
+  - `week2/figures/<NNN-section>/`: `stem.png` and `option_X.png` on their own.
+- `reels/`: the renderers (see below). Output goes to `reels/out/` (git-ignored); send files to the owner rather than committing them.
 
-## Canva (work only inside the folder "PATmatrix", id `FAHYdWoKIe8`; don't touch other projects)
-- Carousel template: **"PATmatrix Daily Puzzle — TEMPLATE"** `DAHYd7gNwfg`, 1080×1350. Page 1 = puzzle (section tag + "DAILY PUZZLE #00X", question, rule line, figure area, "Comment your answer" / "Swipe for answer"). Page 2 = THE ANSWER (big letter + answer figure `aNNN.png`, Boxie happy, "Why it fits"). Page 3 = COMMON TRAPS (why each wrong option fails). Page 4 = SEE YOU TOMORROW / Follow @pat.matrix / Save this for later. Pages 5–6 = Boxie face sheet + alternate end page, reference only and not posted.
-- Finished examples to match exactly: "PATmatrix Daily Puzzle #001"–"#007" in the same folder (3 pages each). Read them first and copy their style and the way `qNNN.png`/`aNNN.png` were placed.
-- Reel starting point: `DAHY7KOByoE`, an untouched 1080×1920 resize of the carousel template. Rename it **"PATmatrix Reel — TEMPLATE"** and rework it into the Reel scenes below.
-- Show previews and get the owner's OK before every `commit` of a Canva edit. Never post to Instagram.
+## Renderers (`reels/`)
+- **Reel:** `node reels/render.mjs 0NN` → `reels/out/reel-0NN.mp4` (23 s, 1080×1920, with soundtrack). `--stills 0,9,17,20.6` writes review PNGs instead. Scene + animation: `reel.html`.
+- **Carousel + story:** `node reels/posts.mjs 0NN` → `reels/out/posts/0NN/carousel-1..4.png` (1080×1350) and `story-1..2.png` (1080×1920). Scene: `posts.html`.
+- **Shared look:** `theme.js` (brand palette, dotted background, Halloween build-up decorations, logo plate on dark days). **Audio:** `audio.py` synthesizes the music bed + sound effects (no samples, nothing to license); the render loudness-normalises to about -14 LUFS.
+- **Assets:** Boxie faces in `reels/assets/boxie/` (cut from the Canva face sheet, body filled white); the owner's vector logo `reels/assets/logo.svg` (`mascot.svg`, `icon.svg` alongside).
+- Owner-approved wording that differs from puzzles.json goes in `OVERRIDES` in `render.mjs` (Reels need short lines).
+- Show stills/MP4s/PNGs to the owner before treating anything as done. Never post to Instagram.
+- The Canva designs in the folder "PATmatrix" (`FAHYdWoKIe8`) are the style reference: carousel template `DAHYd7gNwfg`, examples #001–#007, Reel template `DAHY7KOByoE`. Only touch Canva if the owner asks.
 
-## Order of work
-1. **Reel template first.** Build it from `DAHY7KOByoE`, show previews of every page, and wait for approval.
-2. After approval, for each puzzle #008–#014: a **carousel** (copy `DAHYd7gNwfg`, keep pages 1–4, title "PATmatrix Daily Puzzle #0NN — <Section>"), a **Reel** (copy the approved Reel template, title "PATmatrix Reel #0NN — <Section>") and a **story** (title "PATmatrix Story #0NN — <Section>"). Do one day completely, show it, then do the other six.
-3. A Claude doc **"PATmatrix Week 2 — #008–#014"** with, per day: a suggested posting time, carousel caption, Reel caption, a comment to pin, the story Quiz sticker question + 4 choices, and alt text for each image.
+## Reels: never show the answer in the video
+A Reel's job is to make viewers comment their answer before they see it. No answer letter, answer figure, "why it fits" or hint anywhere in the video. The Reel's **caption** carries the answer + a short breakdown (owner-approved), below the hook, the comment prompt and a line break so it isn't visible in the feed preview. The pinned comment must not give the answer; it invites people to comment.
+One continuous canvas: the puzzle is on screen from 0:00 and never disappears or gets covered; motion lives in the header, the timer lane, Boxie and the bottom bar (the only option motion is an equal lift for every option in turn). Keep text inside the safe zone (nothing important in the bottom ~350 px or the right ~120 px).
+1. Solve, 0:00–0:20: pill "DAT <SECTION> CHALLENGE #0NN", "Most people pick wrong." + the question, the rule line, a countdown chip + timer bar that Boxie rides (curious → thinking → panicking in the last 5 s), the stem box, options (5 = 3 + 2 grid at 224 px; 4 = one row of 214 px with a taller stem box), bottom bar "👇 Drop your letter (A–E) before the timer hits 0!" with a rotating second line (pause tip, then the beta line).
+2. Time's up, 0:20–0:23: "⏰ TIME'S UP! Comment your answer" badge, Boxie sweating; bottom bar "👇 Answer + breakdown in the caption!" then "Follow @pat.matrix for daily PAT" / the beta line.
+Audio (owner-approved): synthesized lo-fi bed + clock ticks (faster in the last 5 s), pops, and a chime/gong at time's up. No voice.
 
-## Reels: NEVER show the answer
-A Reel's job is to make viewers comment their answer before they see it. So no answer letter, no answer figure, no "why it fits" and no hint that gives the answer away anywhere in the Reel video itself. The Reel's **caption** carries the answer + a short breakdown (owner-approved), placed below the hook, the comment prompt and a line break so it isn't visible in the feed preview. The Reel's pinned comment must not give the answer; it invites people to comment their letter.
-Silent: no music, no voiceover, no face. Keep text big and inside the safe zone: nothing important in the bottom ~350 px or the right ~120 px. Put the planned seconds in each page's speaker notes. The owner sets page timing and animations in Canva and downloads the MP4.
-**Reels are rendered in code, not Canva:** `node reels/render.mjs 0NN` writes `reels/out/reel-0NN.mp4` (23 s, 1080×1920, silent) from `week2/puzzles.json` + `figures/`; `--stills 0,9,17,20.6` writes review PNGs. Scene + animation live in `reels/reel.html`; Boxie faces are in `reels/assets/boxie/` (cut from the Canva face sheet); the logo is the owner's vector `reels/assets/logo.svg` (`mascot.svg`, `icon.svg` alongside). #013 gets a small witch hat on Boxie (Halloween). Owner-approved wording that differs from puzzles.json goes in `OVERRIDES` in `render.mjs`. Motion stays out of the puzzle: the stem and options never move or get covered (the only option motion is an equal lift for every option in turn). Show stills + the MP4 to the owner before treating a Reel as done.
-The Canva Reel template below is the layout reference the renderer follows. The approved Reel template ("PATmatrix Reel — TEMPLATE", `DAHY7KOByoE`) is one continuous canvas: the same layout on both pages, so the puzzle is on screen from 0:00 and never disappears. Export pages 1–2 only.
-1. Solve, 0:00–0:20: yellow pill "DAT <SECTION> CHALLENGE #0NN" (no seconds, so timer length can be tested in Canva), "Most people pick wrong." + the question, the rule line, a navy timer bar, the stem in the object box with a small curious Boxie in its corner, options from `figures/` (5 options = 3 + 2 grid at 224 px; 4 options = one row of 214 px so the stem box can be taller), and a navy bottom bar: "👇 Drop your letter (A–E) before the timer hits 0!" · "🔒 Want the beta? Comment or DM "BETA"".
-2. Time's up, 0:20–0:23: same frame, timer empty, Boxie sweating, "⏰ TIME'S UP! Comment your answer" badge; bottom bar "👇 Answer + breakdown in the caption! Follow @pat.matrix for daily PAT." · the beta line.
+## Carousel (4 slides) and story (2 frames)
+Carousel: 1 puzzle (`qNNN.png`, "Comment your answer" / "Swipe for answer"), 2 THE ANSWER (letter, answer figure or answer text, why it fits), 3 COMMON TRAPS (each wrong option + reason), 4 SEE YOU TOMORROW (follow, save, beta line). Story: 1 the puzzle with a clear empty area (y≈1270–1530) for Instagram's Quiz sticker; 2 a next-morning frame "Yesterday's answer is on our page 👉 @pat.matrix" (no answer on the story).
 
-## Story format (1080×1920)
-The puzzle in a compact layout, leaving a clear empty area for Instagram's Quiz sticker, which the owner adds in the app. Plus a next-morning frame: "Yesterday's answer is on our page 👉 @pat.matrix" (the story can point to the carousel, but keep the answer itself on the carousel). Same safe-zone rule.
+## Halloween build-up (week 2, owner-approved)
+Mon 26 Oct → Sat 31 Oct climax → calm Sun 1 Nov. Light theme Mon–Tue with a few bats/cobwebs, dusk Wed, **dark night theme Thu–Sat** (moon, stars, bats, lit pumpkins, ghosts, fog; Saturday adds a witch hat on Boxie and a purple glow), back to light on Sunday with one pumpkin. A countdown label ("🎃 3 days to Halloween") sits in the top band. Puzzle boxes and option cards stay white on every theme so the figures read clearly. Levels live in `DAYS` in `theme.js`.
 
 ## Brand rules
 - Calls to action: comment your answer · check out @pat.matrix for the answer · follow for the daily puzzle · comment or DM "BETA" for beta access. The beta is invite-only, 18+ and small, so never promise instant access.
-- Boxie (the white cube mascot) never speaks; use the expressions on page 5 of the carousel template. Light theme only. Match #001–#007 exactly in fonts, colours and the dotted background.
-- Never name competitors. No made-up statistics ("90% get this wrong"). No AI voice, no music, no faces.
+- Boxie (the white cube mascot) never speaks; use the face-sheet expressions. Match #001–#007 in colours and the dotted background (font: Liberation Sans Bold as the closest available match). Light theme except the Halloween build-up above.
+- Never name competitors. No made-up statistics ("90% get this wrong"). No AI voice, no faces. Music only as the synthesized bed above.
 - Captions: first line under 125 characters with the hook. Use natural keywords (DAT Perceptual Ability Test, PAT practice, predental, plus the section name), then 3–5 hashtags such as #datprep #predental #patprep #datstudy #dentalschool.
-- Sat 31 Oct is Halloween. A light spooky touch on #013 is fine (e.g. Boxie in a tiny witch hat) if it stays on-brand.
+
+## Order of work (week 2)
+1. Reels, carousels and stories for #008–#014 (renderers above).
+2. A Claude doc **"PATmatrix Week 2 — #008–#014"** with, per day: a suggested posting time, carousel caption, Reel caption (with answer + breakdown), a comment to pin, the story Quiz sticker question + 4 choices, and alt text for each image.
 
 ## Quality check before saying you're done
-Look at every page's thumbnail. Check that the right puzzle is on the right day and the carousel answer matches `week2/puzzles.json`. Check that **no Reel shows or hints at the answer**, nothing is cropped or overlapping, the text is readable on a phone, and no template placeholder like "[why this option fails]" or "#001" is left. Then list every design with its Canva link.
+Look at every frame/slide. Check that the right puzzle is on the right day and the carousel answer matches `week2/puzzles.json`. Check that **no Reel or story shows or hints at the answer**, nothing is cropped or overlapping, the text is readable on a phone, and no placeholder text is left.

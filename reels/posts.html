@@ -60,7 +60,7 @@ function logo(th = TH, x = 815, y = 58) { drawLogo(ctx, img.logo, x, y, 200, 84,
 function boxie(name, cx, cy, w, rot = 0) {
   const im = img[name], h = w * im.height / im.width;
   ctx.save(); ctx.translate(cx, cy); ctx.rotate(rot * Math.PI / 180); ctx.drawImage(im, -w / 2, -h / 2, w, h);
-  if (TH.hat && name !== 'sparkles') { ctx.translate(w * 0.05, -h / 2 + 4); drawWitchHat(ctx, w / 160); }
+  if (TH.hat && name !== 'sparkles') { ctx.translate(w * 0.05, -h / 2 + 4 + (name === 'hello' ? h * 0.17 : 0)); drawWitchHat(ctx, Math.min(w / 160, 1.2)); }
   ctx.restore();
 }
 function card(x, y, w, h, stroke = C.navy, lw = 3) { ctx.fillStyle = C.white; rr(x, y, w, h, 14); ctx.fill(); ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.stroke(); }
@@ -155,7 +155,7 @@ function slide4() {
   ctx.fillStyle = C.cream; rr(315, 750, 450, 84, 8); ctx.fill(); ctx.strokeStyle = C.navy; ctx.lineWidth = 2; ctx.stroke();
   text('Save this for later', 540, 793, { size: 38, align: 'center', color: C.navy });
   text('🔒 Want the beta? Comment or DM "BETA"', 540, 895, { size: 32, align: 'center', color: TH.pal.sub });
-  boxie('hello', 540, 1160, 400);
+  boxie('hello', 540, 1180, 400);
 }
 
 // ---------- story ----------
@@ -164,9 +164,10 @@ function story1() {
   storyBg(TH); drawThemeDecor(ctx, 1080, 1920, TH, 2, { top: [0, 228], bottom: [1545, 1920] });
   if (TH.label) text(TH.label, 540, 196, { size: 32, align: 'center', color: TH.pal.dark ? C.pumpkin : C.navy });
   tag(P.tag, 60, 250); drawLogo(ctx, img.logo, 760, 236, 199, 84, TH);
-  const hh = para(P.question, 60, 345, 900, 60, 1.08, { maxLines: 3, min: 40 });
-  para(P.rule, 60, 345 + hh + 8, 900, 30, 1.25, { color: TH.pal.sub, bold: false, maxLines: 2, min: 22 });
-  fit(img.q, 60, 520, 960, 625);
+  const hh = para(P.question, 60, 345, 900, 56, 1.08, { maxLines: 2, min: 36 });
+  const rh = para(P.rule, 60, 345 + hh + 8, 900, 30, 1.25, { color: TH.pal.sub, bold: false, maxLines: 2, min: 22 });
+  const qy = Math.max(520, 345 + hh + 8 + rh + 16);
+  fit(img.q, 60, qy, 960, 1145 - qy);
   boxie('curious', 900, 1215, 120, -10);
   text('Tap your answer in the quiz 👇', 60, 1215, { size: 36 });
   // 1270-1530 left empty for Instagram's Quiz sticker
